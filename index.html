@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歴史テストアプリ - 第二次世界大戦と日本</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 15px;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.6;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 700px;
+            box-sizing: border-box;
+        }
+        h1 {
+            text-align: center;
+            color: #1d3557;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+        .quiz-area, .result-area {
+            margin-bottom: 20px;
+        }
+        .question-number {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+            text-align: right;
+        }
+        .question-text {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #457b9d;
+            font-weight: bold;
+        }
+        .answer-input {
+            width: calc(100% - 24px); /* padding and border */
+            padding: 12px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+        .button-area {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .button {
+            background-color: #4a90e2; /* より鮮やかな青 */
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1em;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background-color 0.2s ease;
+        }
+        .button:hover {
+            background-color: #357abd; /* ホバー時の色を少し暗く */
+        }
+        .button:disabled {
+            background-color: #b0c4de;
+            cursor: not-allowed;
+        }
+        .feedback-area {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .correct {
+            background-color: #d1e7dd; /* よりソフトな緑 */
+            color: #0f5132;
+            border: 1px solid #a3cfbb;
+        }
+        .incorrect {
+            background-color: #f8d7da;
+            color: #842029;
+            border: 1px solid #f1aeb5;
+        }
+        .result-area h2 {
+            color: #1d3557;
+            text-align: center;
+        }
+        .result-area p {
+            font-size: 1.2em;
+            text-align: center;
+            color: #457b9d;
+        }
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e9ecef;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            height: 22px;
+            overflow: hidden; /* 角丸を維持するため */
+        }
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #28a745; /* 明るい緑 */
+            border-radius: 6px 0 0 6px; /* 左側だけ角丸、右側はコンテナに依存 */
+            text-align: center;
+            line-height: 22px;
+            color: white;
+            font-size: 0.85em;
+            font-weight: bold;
+            transition: width 0.3s ease-in-out;
+        }
+        /* スマートフォンで入力欄がズームされるのを防ぐ */
+        @media screen and (max-width: 768px) {
+            .answer-input, .button {
+                font-size: 16px; /* 16px未満だとiOSでズームされることがある */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>第二次世界大戦と日本 テスト</h1>
+        <div id="quiz-area">
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar">0%</div>
+            </div>
+            <div id="question-number" class="question-number"></div>
+            <div class="question-area">
+                <p class="question-text" id="question-text"></p>
+                <input type="text" id="answer-input" class="answer-input" placeholder="答えを入力">
+            </div>
+            <div class="button-area">
+                <button id="submit-button" class="button">回答する</button>
+                <button id="next-button" class="button" style="display:none;">次の問題へ</button>
+            </div>
+            <div id="feedback-area" class="feedback-area" style="display:none;"></div>
+        </div>
+        <div id="result-area" class="result-area" style="display:none;">
+            <h2>テスト結果</h2>
+            <p id="score-text"></p>
+            <button id="restart-button" class="button">もう一度挑戦する</button>
+        </div>
+    </div>
+
+    <script>
+        // 問題データ: q = 問題文, a = 正解のパターンの配列 (ひらがな、カタカナ、漢字、略称など複数の正解を許容)
+        const questions = [
+            { q: "(1) 1931年、日本が南満州鉄道を爆破して、満州全土を占領したできごとを何といいますか。", a: ["満州事変", "まんしゅうじへん"] },
+            { q: "(2) (1)のできごとがきっかけとなって、日本が脱退した国際機関を何といいますか。", a: ["国際連盟", "こくさいれんめい"] },
+            { q: "(3) 1932年、海軍の青年将校らが犬養毅首相を暗殺した事件を何といいますか。", a: ["五・一五事件", "ごいちごじけん", "515事件", "５１５事件", "五一五事件"] },
+            { q: "(4) 1936年、陸軍の青年将校らが、有力な政治家らをおそった事件を何といいますか。", a: ["二・二六事件", "ににろくじけん", "226事件", "２２６事件", "二二六事件"] },
+            { q: "(5) 1937年、北京郊外の盧溝橋での中国軍との衝突から始まった戦争を何といいますか。", a: ["日中戦争", "にっちゅうせんそう", "盧溝橋事件", "ろこうきょうじけん"] },
+            { q: "(6) 政府が戦時体制を強化するために、国民や物資のすべてを戦争に動員できるようにした法律を何といいますか。", a: ["国家総動員法", "こっかそうどういんほう"] },
+            { q: "(7) 第二次世界大戦は、ドイツがどこの国に侵攻したことから始まりましたか。", a: ["ポーランド", "ぽーらんど"] },
+            { q: "(8) 1940年に日本・ドイツ・イタリアが結んだ軍事同盟を何といいますか。", a: ["日独伊三国同盟", "にちどくいさんごくどうめい", "三国同盟", "さんごくどうめい"] },
+            { q: "(9) 日本の南方進出に対し、アメリカは経済的な圧力を加え、イギリス・中国・オランダと結んで対抗しましたが、これを軍部は何とよんでいましたか。", a: ["ABCD包囲網", "ABCDライン", "エービーシーディーほういもう", "エービーシーディーライン", "ABCD包囲陣", "abcd包囲網"] },
+            { q: "(10) 太平洋戦争が始まったのは、西暦何年のことですか。", a: ["1941年", "1941", "１９４１年", "１９４１"] },
+            { q: "(11) 太平洋戦争は、日本海軍がハワイのどこを攻撃したことがきっかけになりましたか。", a: ["真珠湾", "しんじゅわん", "パールハーバー", "ぱーるはーばー"] },
+            { q: "(12) アメリカが反撃に転じるきっかけとなった、日本が敗北した1942年の海戦を何といいますか。", a: ["ミッドウェー海戦", "みっどうぇーかいせん"] },
+            { q: "(13) アメリカ軍が上陸し激しい戦いの末、たくさんの日本軍人と住民が犠牲となり、ついに占領された場所はどこですか。", a: ["沖縄", "おきなわ", "沖縄県", "おきなわけん"] },
+            { q: "(14) 太平洋戦争終結の際に、アメリカ・イギリス・中華民国の名で発表された宣言を何といいますか。", a: ["ポツダム宣言", "ぽつだむせんげん"] },
+            { q: "(15) 原子爆弾を8月6日に投下された都市と、8月9日に投下された都市は、それぞれどこですか。（例: 東京、大阪）", a: ["広島、長崎", "広島・長崎", "ひろしま、ながさき", "ひろしま・ながさき", "広島と長崎", "広島 長崎", "ヒロシマ、ナガサキ", "ヒロシマ・ナガサキ"] },
+            { q: "(16) 日本が(14)の宣言を受け入れて降伏したのは、西暦何年のことですか。", a: ["1945年", "1945", "１９４５年", "１９４５"] }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+
+        const questionNumberEl = document.getElementById('question-number');
+        const questionTextEl = document.getElementById('question-text');
+        const answerInputEl = document.getElementById('answer-input');
+        const submitButtonEl = document.getElementById('submit-button');
+        const nextButtonEl = document.getElementById('next-button');
+        const feedbackAreaEl = document.getElementById('feedback-area');
+        const quizAreaEl = document.getElementById('quiz-area');
+        const resultAreaEl = document.getElementById('result-area');
+        const scoreTextEl = document.getElementById('score-text');
+        const restartButtonEl = document.getElementById('restart-button');
+        const progressBarEl = document.getElementById('progress-bar');
+
+        function normalizeAnswer(str) {
+            if (typeof str !== 'string') str = String(str);
+            return str.normalize('NFKC') // 全角英数記号を半角に、半角カナを全角カナに、濁点などを結合文字に
+                      .toLowerCase() // 小文字に統一
+                      .replace(/\s+/g, '') // 空白を除去
+                      .replace(/ー/g, 'ー') // 長音符はそのまま（カタカナの長音はひらがなに変換されないため）
+                      .replace(/・/g, '') // 中黒点を除去 (例: 五・一五事件)
+                      .replace(/[、，。．]/g, ''); // 読点、句点を除去
+        }
+        
+        function loadQuestion() {
+            if (currentQuestionIndex < questions.length) {
+                const currentQuestion = questions[currentQuestionIndex];
+                questionNumberEl.textContent = `問題 ${currentQuestionIndex + 1} / ${questions.length}`;
+                questionTextEl.textContent = currentQuestion.q;
+                answerInputEl.value = '';
+                answerInputEl.disabled = false;
+                answerInputEl.focus();
+                feedbackAreaEl.style.display = 'none';
+                submitButtonEl.style.display = 'inline-block';
+                submitButtonEl.disabled = false;
+                nextButtonEl.style.display = 'none';
+                updateProgressBar();
+            } else {
+                showResults();
+            }
+        }
+        
+        function checkAnswer() {
+            const userAnswer = answerInputEl.value.trim();
+            if (userAnswer === "") {
+                alert("答えを入力してください。");
+                return;
+            }
+
+            submitButtonEl.disabled = true; // 回答ボタンを無効化
+
+            const currentQuestion = questions[currentQuestionIndex];
+            const normalizedUserAnswer = normalizeAnswer(userAnswer);
+            
+            const isCorrect = currentQuestion.a.some(ans => normalizeAnswer(ans) === normalizedUserAnswer);
+
+            answerInputEl.disabled = true;
+            submitButtonEl.style.display = 'none';
+            nextButtonEl.style.display = 'inline-block';
+            nextButtonEl.focus(); // 次へボタンにフォーカス
+            feedbackAreaEl.style.display = 'block';
+
+            if (isCorrect) {
+                score++;
+                feedbackAreaEl.innerHTML = '<strong>正解！</strong> 🎉';
+                feedbackAreaEl.className = 'feedback-area correct';
+            } else {
+                feedbackAreaEl.innerHTML = `<strong>不正解。</strong> 正解は「<span style="color:#c0392b;">${currentQuestion.a[0]}</span>」です。`;
+                feedbackAreaEl.className = 'feedback-area incorrect';
+            }
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        function showResults() {
+            quizAreaEl.style.display = 'none';
+            resultAreaEl.style.display = 'block';
+            scoreTextEl.textContent = `${questions.length} 問中 ${score} 問正解しました！`;
+            progressBarEl.style.width = '100%';
+            progressBarEl.textContent = '完了!';
+            restartButtonEl.focus();
+        }
+
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            quizAreaEl.style.display = 'block';
+            resultAreaEl.style.display = 'none';
+            loadQuestion();
+        }
+
+        function updateProgressBar() {
+            const progress = ((currentQuestionIndex) / questions.length) * 100; // 0問目から始めるので、currentQuestionIndexでOK
+            progressBarEl.style.width = progress + '%';
+            progressBarEl.textContent = Math.round(progress) + '%';
+            if (currentQuestionIndex === questions.length) { // 全問終了時
+                 progressBarEl.style.width = '100%';
+                 progressBarEl.textContent = '100%';
+            }
+        }
+
+        submitButtonEl.addEventListener('click', checkAnswer);
+        nextButtonEl.addEventListener('click', nextQuestion);
+        restartButtonEl.addEventListener('click', restartQuiz);
+        answerInputEl.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // フォーム送信を防ぐ
+                if (submitButtonEl.style.display !== 'none' && !submitButtonEl.disabled) {
+                    checkAnswer();
+                } else if (nextButtonEl.style.display !== 'none') {
+                    nextQuestion();
+                }
+            }
+        });
+
+        // 初期ロード
+        loadQuestion();
+    </script>
+</body>
+</html>
